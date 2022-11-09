@@ -9,6 +9,7 @@ package models;
  * @author MoaathAlrajab
  */
 public class Person {
+
     private String name;
     private String major;
     private int age;
@@ -42,7 +43,5 @@ public class Person {
     public void setAge(int age) {
         this.age = age;
     }
-    
-    
-    
+
 }

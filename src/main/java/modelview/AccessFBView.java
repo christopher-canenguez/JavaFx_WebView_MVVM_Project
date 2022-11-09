@@ -36,8 +36,7 @@ import models.Person;
 
 public class AccessFBView {
 
- 
-     @FXML
+    @FXML
     private TextField nameField;
     @FXML
     private TextField majorField;
@@ -49,9 +48,10 @@ public class AccessFBView {
     private Button readButton;
     @FXML
     private TextArea outputField;
-     private boolean key;
+    private boolean key;
     private ObservableList<Person> listOfUsers = FXCollections.observableArrayList();
     private Person person;
+
     public ObservableList<Person> getListOfUsers() {
         return listOfUsers;
     }
@@ -69,21 +69,21 @@ public class AccessFBView {
         addData();
     }
 
-        @FXML
+    @FXML
     private void readRecord(ActionEvent event) {
         readFirebase();
     }
-    
-            @FXML
+
+    @FXML
     private void regRecord(ActionEvent event) {
         registerUser();
     }
-    
-     @FXML
+
+    @FXML
     private void switchToSecondary() throws IOException {
         App.setRoot("WebContainer.fxml");
     }
-    
+
     public void addData() {
 
         DocumentReference docRef = App.fstore.collection("References").document(UUID.randomUUID().toString());
@@ -95,48 +95,40 @@ public class AccessFBView {
         //asynchronously write data
         ApiFuture<WriteResult> result = docRef.set(data);
     }
-    
-        public boolean readFirebase()
-         {
-             key = false;
+
+    public boolean readFirebase() {
+        key = false;
 
         //asynchronously retrieve all documents
-        ApiFuture<QuerySnapshot> future =  App.fstore.collection("References").get();
+        ApiFuture<QuerySnapshot> future = App.fstore.collection("References").get();
         // future.get() blocks on response
         List<QueryDocumentSnapshot> documents;
-        try 
-        {
+        try {
             documents = future.get().getDocuments();
-            if(documents.size()>0)
-            {
+            if (documents.size() > 0) {
                 System.out.println("Outing....");
-                for (QueryDocumentSnapshot document : documents) 
-                {
-                    outputField.setText(outputField.getText()+ document.getData().get("Name")+ " , Major: "+
-                            document.getData().get("Major")+ " , Age: "+
-                            document.getData().get("Age")+ " \n ");
+                for (QueryDocumentSnapshot document : documents) {
+                    outputField.setText(outputField.getText() + document.getData().get("Name") + " , Major: "
+                            + document.getData().get("Major") + " , Age: "
+                            + document.getData().get("Age") + " \n ");
                     System.out.println(document.getId() + " => " + document.getData().get("Name"));
-                    person  = new Person(String.valueOf(document.getData().get("Name")), 
+                    person = new Person(String.valueOf(document.getData().get("Name")),
                             document.getData().get("Major").toString(),
                             Integer.parseInt(document.getData().get("Age").toString()));
                     listOfUsers.add(person);
                 }
+            } else {
+                System.out.println("No data");
             }
-            else
-            {
-               System.out.println("No data"); 
-            }
-            key=true;
-            
-        }
-        catch (InterruptedException | ExecutionException ex) 
-        {
-             ex.printStackTrace();
+            key = true;
+
+        } catch (InterruptedException | ExecutionException ex) {
+            ex.printStackTrace();
         }
         return key;
     }
-        
-        public void sendVerificationEmail() {
+
+    public void sendVerificationEmail() {
         try {
             UserRecord user = App.fauth.getUser("name");
             //String url = user.getPassword();
@@ -147,11 +139,12 @@ public class AccessFBView {
 
     public boolean registerUser() {
         UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                .setEmail("user@example.com")
+                .setEmail(majorField.getText().trim() + "@example.com") // Trim() method gets rid of the white space.
                 .setEmailVerified(false)
-                .setPassword("secretPassword")
-                .setPhoneNumber("+11234567890")
-                .setDisplayName("John Doe")
+                //.setPassword("secretPassword")
+                //.setPhoneNumber("+11234567890")
+                //.setDisplayName("Chris Canenguez")
+                .setDisplayName(nameField.getText())
                 .setDisabled(false);
 
         UserRecord userRecord;
@@ -161,9 +154,9 @@ public class AccessFBView {
             return true;
 
         } catch (FirebaseAuthException ex) {
-           // Logger.getLogger(FirestoreContext.class.getName()).log(Level.SEVERE, null, ex);
+            // Logger.getLogger(FirestoreContext.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
-        
+
     }
 }
