@@ -29,12 +29,23 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumn.CellEditEvent;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.util.Callback;
+import javafx.util.converter.IntegerStringConverter;
+import javafx.util.converter.NumberStringConverter;
 import models.Person;
 
-public class AccessFBView {
+public class AccessFBView implements Initializable {
 
     @FXML
     private TextField nameField;
@@ -45,46 +56,68 @@ public class AccessFBView {
     @FXML
     private Button writeButton;
     @FXML
-    private Button readButton;
-    @FXML
     private TextArea outputField;
+
+    @FXML
+    private TableView<Person> tableView;
+    @FXML
+    private TableColumn<Person, String> nameColumn;
+    @FXML
+    private TableColumn<Person, String> majorColumn;
+    @FXML
+    private TableColumn<Person, Integer> ageColumn;
+
+    @FXML
+    private MenuItem deleteMenuItem;
+
     private boolean key;
     private ObservableList<Person> listOfUsers = FXCollections.observableArrayList();
     private Person person;
 
-    public ObservableList<Person> getListOfUsers() {
+    public ObservableList<Person> getListOfUsers() 
+    {
         return listOfUsers;
-    }
+    } // End getListOfUsers.
 
-    void initialize() {
-
+    @Override
+    public void initialize(URL url, ResourceBundle rb) 
+    {
         AccessDataViewModel accessDataViewModel = new AccessDataViewModel();
         nameField.textProperty().bindBidirectional(accessDataViewModel.userNameProperty());
         majorField.textProperty().bindBidirectional(accessDataViewModel.userMajorProperty());
         writeButton.disableProperty().bind(accessDataViewModel.isWritePossibleProperty().not());
-    }
+
+        nameColumn.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
+        majorColumn.setCellValueFactory(new PropertyValueFactory<Person, String>("major"));
+        ageColumn.setCellValueFactory(new PropertyValueFactory<Person, Integer>("age"));
+
+        // Update the table to allow for the name, major and age fields to be editable.
+        tableView.setEditable(true);
+        nameColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        majorColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        ageColumn.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+    } // End initialize.
 
     @FXML
-    private void addRecord(ActionEvent event) {
+    private void addRecord(ActionEvent event) 
+    {
         addData();
-    }
+    } // End addRecord.
 
     @FXML
-    private void readRecord(ActionEvent event) {
+    private void readRecord(ActionEvent event) 
+    {
         readFirebase();
-    }
+    } // End readRecord.
 
     @FXML
-    private void regRecord(ActionEvent event) {
-        registerUser();
-    }
+    private void deleteRecord(ActionEvent event) 
+    {
+        deleteDocument();
+    } // End deleteRecord.
 
-    @FXML
-    private void switchToSecondary() throws IOException {
-        App.setRoot("WebContainer.fxml");
-    }
-
-    public void addData() {
+    public void addData() 
+    {
 
         DocumentReference docRef = App.fstore.collection("References").document(UUID.randomUUID().toString());
         // Add document data  with id "alovelace" using a hashmap
@@ -92,71 +125,136 @@ public class AccessFBView {
         data.put("Name", nameField.getText());
         data.put("Major", majorField.getText());
         data.put("Age", Integer.parseInt(ageField.getText()));
+
+        clearFields(); // Clear textfields once data is entered.
+
         //asynchronously write data
         ApiFuture<WriteResult> result = docRef.set(data);
     }
 
-    public boolean readFirebase() {
-        key = false;
+    public void changeNameCellEvent(CellEditEvent editedCell) 
+    {
+        Person p = tableView.getSelectionModel().getSelectedItem();
+        System.out.println("Name before: " + p.getName());
+        p.setName(editedCell.getNewValue().toString());
+        System.out.println("After before: " + p.getName());
 
-        //asynchronously retrieve all documents
-        ApiFuture<QuerySnapshot> future = App.fstore.collection("References").get();
-        // future.get() blocks on response
-        List<QueryDocumentSnapshot> documents;
-        try {
+        // Update an existing document
+        DocumentReference docRef = App.fstore.collection("References").document(p.getId());
+        // (async) Update one field
+        ApiFuture<WriteResult> future = docRef.update("Name", p.getName());
+    }
+
+    public void changeMajorCellEvent(CellEditEvent editedCell) 
+    {
+        Person p = tableView.getSelectionModel().getSelectedItem();
+        p.setMajor(editedCell.getNewValue().toString());
+        
+        // Update an existing document
+        DocumentReference docRef = App.fstore.collection("References").document(p.getId());
+        // (async) Update one field
+        ApiFuture<WriteResult> future = docRef.update("Major", p.getMajor());
+    }
+
+    public void changeAgeCellEvent(CellEditEvent editedCell) 
+    {
+        Person p = tableView.getSelectionModel().getSelectedItem();
+        p.setAge(Integer.valueOf(editedCell.getNewValue().toString()));
+        
+        // Update an existing document
+        DocumentReference docRef = App.fstore.collection("References").document(p.getId());
+        // (async) Update one field
+        ApiFuture<WriteResult> future = docRef.update("Age", p.getAge());
+    }
+
+    /**
+     * version of method that will print into table rather than the original
+     * textArea.
+     *
+     * @return
+     */
+    public boolean readFirebase() 
+    {
+        try 
+        {
+            key = false;
+            tableView.getItems().clear(); // Clears the table when reading.
+
+            // Asynchronously retrieve all documents.
+            ApiFuture<QuerySnapshot> future = App.fstore.collection("References").get();
+
+            // future.get() blocks on response
+            List<QueryDocumentSnapshot> documents;
+
+            // Go through the firebase database, create a Person object for every document.
             documents = future.get().getDocuments();
-            if (documents.size() > 0) {
+            if (documents.size() > 0) 
+            {
                 System.out.println("Outing....");
-                for (QueryDocumentSnapshot document : documents) {
-                    outputField.setText(outputField.getText() + document.getData().get("Name") + " , Major: "
-                            + document.getData().get("Major") + " , Age: "
-                            + document.getData().get("Age") + " \n ");
-                    System.out.println(document.getId() + " => " + document.getData().get("Name"));
+                for (QueryDocumentSnapshot document : documents) 
+                {
                     person = new Person(String.valueOf(document.getData().get("Name")),
                             document.getData().get("Major").toString(),
-                            Integer.parseInt(document.getData().get("Age").toString()));
-                    listOfUsers.add(person);
-                }
-            } else {
-                System.out.println("No data");
-            }
-            key = true;
+                            Integer.parseInt(document.getData().get("Age").toString()), document.getId());
+                    //person.setId(document.getId());
+                    System.out.println(person);
 
-        } catch (InterruptedException | ExecutionException ex) {
-            ex.printStackTrace();
+                    listOfUsers.add(person);
+
+                    System.out.println(document.getId() + " => " + document.getData().get("Name"));
+                } // End for.
+            } // End if.
+
+            tableView.setItems(listOfUsers);
+
+        } catch (InterruptedException ex) 
+        {
+            Logger.getLogger(AccessFBView.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) 
+        {
+            Logger.getLogger(AccessFBView.class.getName()).log(Level.SEVERE, null, ex);
         }
         return key;
     }
 
-    public void sendVerificationEmail() {
-        try {
-            UserRecord user = App.fauth.getUser("name");
-            //String url = user.getPassword();
+    @FXML
+    private void switchToWeb() throws IOException 
+    {
+        App.setRoot("WebContainer.fxml");
+    } // End switchToWeb.
+    
+    @FXML
+    private void switchToMenu() throws IOException 
+    {
+        App.setRoot("MainMenu.fxml");
+    } // End switchToWeb.
 
-        } catch (Exception e) {
-        }
+    @FXML
+    private void switchToRegisterPage() throws IOException 
+    {
+        App.setRoot("RegisterMenu.fxml");
+    }
+    
+    @FXML
+    private void switchToLogin() throws IOException 
+    {
+        App.setRoot("LoginPage.fxml");
     }
 
-    public boolean registerUser() {
-        UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                .setEmail(majorField.getText().trim() + "@example.com") // Trim() method gets rid of the white space.
-                .setEmailVerified(false)
-                //.setPassword("secretPassword")
-                //.setPhoneNumber("+11234567890")
-                //.setDisplayName("Chris Canenguez")
-                .setDisplayName(nameField.getText())
-                .setDisabled(false);
+    public void clearFields() 
+    {
+        nameField.clear();
+        majorField.clear();
+        ageField.clear();
+    }
 
-        UserRecord userRecord;
-        try {
-            userRecord = App.fauth.createUser(request);
-            System.out.println("Successfully created new user: " + userRecord.getUid());
-            return true;
+    @FXML
+    private void deleteDocument() 
+    {
+        Person p = tableView.getSelectionModel().getSelectedItem();
+        tableView.getItems().remove(p);
 
-        } catch (FirebaseAuthException ex) {
-            // Logger.getLogger(FirestoreContext.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
-        }
-
+        // asynchronously delete a document
+        ApiFuture<WriteResult> writeResult = App.fstore.collection("References").document(p.getId()).delete();
     }
 }

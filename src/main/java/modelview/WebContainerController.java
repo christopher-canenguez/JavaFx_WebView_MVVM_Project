@@ -32,7 +32,8 @@ import org.w3c.dom.Document;
  *
  * @author MoaathAlrajab
  */
-public class WebContainerController implements Initializable {
+public class WebContainerController implements Initializable 
+{
 
     Document doc;
     private DateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
@@ -83,39 +84,49 @@ public class WebContainerController implements Initializable {
     private WebEngine webEngine;
 
     @FXML
-    private void goAction(ActionEvent evt) {
+    private void goAction(ActionEvent evt) 
+    {
         webEngine.load("http://google.com");
     }
 
     @FXML
-    private void setLabel(ActionEvent e) {
+    private void setLabel(ActionEvent e) 
+    {
         System.out.println("H1");
 
         doc.getElementById("ueberschr").setAttribute("value", "Red");
     }
 
     @FXML
-    private void swithcBackStage(ActionEvent e) {
-        try {
-            App.setRoot("AccessFBView.fxml");
-        } catch (IOException ex) {
+    private void switchToMenu(ActionEvent e) 
+    {
+        try 
+        {
+            App.setRoot("MainMenu.fxml");
+        } catch (IOException ex) 
+        {
             Logger.getLogger(WebContainerController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     @Override
-    public void initialize(URL url, ResourceBundle rb) {
+    public void initialize(URL url, ResourceBundle rb) 
+    {
 
-        try {
+        try 
+        {
             webEngine = webView.getEngine();
             //  webView.setContextMenuEnabled(false);
             //webEngine.loadContent(HTML_STRING2);
             webEngine.load("http://www.google.com");
 
-            webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
+            webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() 
+            {
                 @Override
-                public void changed(ObservableValue<? extends State> ov, State t, State newState) {
-                    if (newState == Worker.State.SUCCEEDED) {
+                public void changed(ObservableValue<? extends State> ov, State t, State newState) 
+                {
+                    if (newState == Worker.State.SUCCEEDED) 
+                    {
                         doc = webEngine.getDocument();
                         // Get window object of page.
                         JSObject jsobj = (JSObject) webEngine.executeScript("window");
@@ -135,17 +146,21 @@ public class WebContainerController implements Initializable {
             // this.getClass().getResource("newhtml.html").toExternalForm()
             //        "file://Users/MoaathAlrajab/Documents/demo265/MVVMExample/src/main/resources/com/mycompany/mvvmexample/newhtml.html"
             //);
-        } catch (Exception ex) {
+        } catch (Exception ex) 
+        {
             Logger.getLogger(WebContainerController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    public class Bridge {
+    public class Bridge 
+    {
 
-        public void showTime() {
+        public void showTime() 
+        {
             System.out.println("Show Time");
 
             label.setText("Now is: " + df.format(new Date()));
         }
     }
+
 }
